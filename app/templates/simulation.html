@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Симулация{% endblock %}
+
+{% block content %}
+<h1>Симулация на един работен ден</h1>
+
+<form method="get">
+  <fieldset>
+    <legend>Параметри</legend>
+    <label>Клиенти на час
+      <input type="number" name="rate" value="{{ params.rate|plain_number }}" min="1" max="600">
+    </label>
+    <label>Обслужване (мин)
+      <input type="number" name="service" value="{{ params.service|plain_number }}" min="0.5" max="30" step="0.1">
+    </label>
+    <label>Брой каси
+      <input type="number" name="cashiers" value="{{ params.cashiers }}" min="1" max="12">
+    </label>
+    <label>Вид опашка
+      <select name="mode">
+        {% for key, name in modes.items() %}
+        <option value="{{ key }}" {{ 'selected' if key == params.mode }}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Работен ден (мин)
+      <input type="number" name="duration" value="{{ params.duration }}" min="30" max="720" step="30">
+    </label>
+    <label title="Един и същ номер дава един и същ ден">Номер на опита
+      <input type="number" name="seed" value="{{ params.seed }}" min="0" max="999999">
+    </label>
+    <button type="submit">Симулирай</button>
+  </fieldset>
+</form>
+
+{% if overloaded %}
+<p class="warning">Касите не смогват: идват повече клиенти, отколкото могат да бъдат
+  обслужени, и опашката расте през целия ден.</p>
+{% endif %}
+
+<dl class="stats">
+  <div><dt>Клиенти за деня</dt><dd>{{ stats.customers }}</dd></div>
+  <div><dt>Средно чакане</dt><dd>{{ stats.avg_wait|minutes }}</dd></div>
+  <div><dt>Най-дълго чакане</dt><dd>{{ stats.max_wait|minutes }}</dd></div>
+  <div><dt>Чакали над 5 мин</dt><dd>{{ stats.over_limit_share|percent }}</dd></div>
+  <div><dt>Заетост на касите</dt><dd>{{ stats.utilization|percent }}</dd></div>
+</dl>
+
+<h2>Как минава денят</h2>
+<canvas id="animation" height="230"></canvas>
+<div class="controls">
+  <button type="button" id="play">Пусни</button>
+  <label>Скорост
+    <select id="speed">
+      <option value="2">бавно</option>
+      <option value="10" selected>нормално</option>
+      <option value="40">бързо</option>
+    </select>
+  </label>
+  <input type="range" id="time" min="0" value="0" step="0.5" aria-label="Момент от деня">
+  <span id="clock">08:00</span>
+</div>
+<p id="counters" class="note"></p>
+
+<h2>Графики</h2>
+<div class="charts">
+  <div>{{ histogram|safe }}</div>
+  <div>{{ queue|safe }}</div>
+</div>
+
+<script id="animation-data" type="application/json">{{ animation|tojson }}</script>
+<script src="{{ url_for('static', filename='animation.js') }}"></script>
+{% endblock %}

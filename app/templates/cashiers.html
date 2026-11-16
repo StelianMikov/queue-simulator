@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Колко каси?{% endblock %}
+
+{% block content %}
+<h1>Колко каси са нужни?</h1>
+<p>Пробват се всички варианти от 1 каса до зададения максимум. Търси се най-малкият брой,
+  при който средното чакане е под целта.</p>
+
+<form method="get">
+  <fieldset>
+    <legend>Параметри</legend>
+    <label>Клиенти на час
+      <input type="number" name="rate" value="{{ params.rate|plain_number }}" min="1" max="600">
+    </label>
+    <label>Обслужване (мин)
+      <input type="number" name="service" value="{{ params.service|plain_number }}" min="0.5" max="30" step="0.1">
+    </label>
+    <label>Най-много каси
+      <input type="number" name="max_cashiers" value="{{ params.max_cashiers }}" min="1" max="15">
+    </label>
+    <label>Целево чакане (мин)
+      <input type="number" name="target" value="{{ params.target|plain_number }}" min="0.1" max="60" step="0.1">
+    </label>
+    <label>Повторения
+      <input type="number" name="runs" value="{{ params.runs }}" min="1" max="50">
+    </label>
+    <button type="submit">Изчисли</button>
+  </fieldset>
+</form>
+
+{% if best_mode %}
+<p class="answer">Нужни са поне <strong>{{ recommended[best_mode] }} каси</strong>, за да е
+  средното чакане под {{ params.target|minutes }}.</p>
+{% else %}
+<p class="answer">С {{ params.max_cashiers }} каси целта от {{ params.target|minutes }}
+  <strong>не се постига</strong>.</p>
+{% endif %}
+<ul>
+  {% for key, name in modes.items() %}
+  <li>{{ name }}:
+    {% if recommended[key] %}{{ recommended[key] }} каси{% else %}не стигат {{ params.max_cashiers }} каси{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+
+<div class="chart">{{ chart|safe }}</div>
+
+<h2>Средно чакане за всеки вариант</h2>
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Каси</th>
+        {% for name in modes.values() %}<th>{{ name }}</th>{% endfor %}
+        <th>По формулата (обща опашка)</th>
+        <th>Заетост</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.cashiers }}{% if row.overloaded %} <em>не смогват</em>{% endif %}</td>
+        {% for key in modes %}
+        <td class="{{ 'chosen' if recommended[key] == row.cashiers }}">
+          {{ row.results[key].avg_wait|minutes }}{% if recommended[key] == row.cashiers %} ✓{% endif %}
+        </td>
+        {% endfor %}
+        <td>{% if row.overloaded %}-{% else %}{{ row.theory|minutes }}{% endif %}</td>
+        <td>{{ row.results.common.utilization|percent }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="note">С ✓ е отбелязан най-малкият брой каси, при който целта е постигната. Всяка
+  стойност е средна от {{ params.runs }} симулирани дни по 8 часа. Вариантите, при които
+  касите не смогват, не са на графиката.</p>
+{% endblock %}
